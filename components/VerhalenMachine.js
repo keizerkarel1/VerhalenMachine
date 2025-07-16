@@ -78,6 +78,10 @@ const VerhalenMachine = () => {
     }
   };
 
+  const handleAudioEnd = () => {
+    setIsPlaying(false);
+  };
+
   const generateStory = async () => {
     if (!input.trim()) return;
     
