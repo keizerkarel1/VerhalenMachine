@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Sparkles, BookOpen, Loader2, Star, Wand2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Sparkles, BookOpen, Loader2, Star, Wand2, Volume2, VolumeX, Pause, Play } from 'lucide-react';
 
 const VerhalenMachine = () => {
   const [input, setInput] = useState('');
   const [story, setStory] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentStep, setCurrentStep] = useState('');
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
 
   const callClaude = async (prompt) => {
     const response = await fetch('/api/claude', {
@@ -22,6 +25,57 @@ const VerhalenMachine = () => {
 
     const data = await response.json();
     return data.response;
+  };
+
+  const generateAudio = async () => {
+    if (!story) return;
+    
+    setIsGeneratingAudio(true);
+    
+    try {
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: story }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate audio');
+      }
+
+      const data = await response.json();
+      
+      // Convert base64 to audio blob
+      const audioBlob = new Blob([Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      // Create and play audio
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+      
+    } catch (error) {
+      console.error('Error generating audio:', error);
+      alert('Oeps! Er ging iets mis bij het maken van de audio. Probeer het nog een keer! 🔊');
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
+  const togglePlayback = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    }
   };
 
   const generateStory = async () => {
@@ -216,16 +270,72 @@ Geef alleen het verhaal terug, geen andere tekst.`;
             </div>
             
             <div className="text-center mt-8">
-              <button
-                onClick={() => {
-                  setStory('');
-                  setInput('');
-                }}
-                className="px-6 py-3 bg-green-500 text-white rounded-xl font-bold text-lg hover:bg-green-600 transition-colors"
-              >
-                Nog een verhaal maken! 🎉
-              </button>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={generateAudio}
+                  disabled={isGeneratingAudio}
+                  className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold text-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {isGeneratingAudio ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      Audio maken...
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 size={20} />
+                      Luisteren naar verhaal
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setStory('');
+                    setInput('');
+                    setIsPlaying(false);
+                    if (audioRef.current) {
+                      audioRef.current.pause();
+                      audioRef.current.src = '';
+                    }
+                  }}
+                  className="px-6 py-3 bg-green-500 text-white rounded-xl font-bold text-lg hover:bg-green-600 transition-colors"
+                >
+                  Nog een verhaal maken! 🎉
+                </button>
+              </div>
+              
+              {/* Audio controls (show only when audio is loaded) */}
+              {audioRef.current && audioRef.current.src && (
+                <div className="mt-4 flex justify-center items-center gap-4">
+                  <button
+                    onClick={togglePlayback}
+                    className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors flex items-center gap-2"
+                  >
+                    {isPlaying ? (
+                      <>
+                        <Pause size={16} />
+                        Pauzeren
+                      </>
+                    ) : (
+                      <>
+                        <Play size={16} />
+                        Afspelen
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
+            
+            {/* Hidden audio element */}
+            <audio
+              ref={audioRef}
+              onEnded={handleAudioEnd}
+              onPause={() => setIsPlaying(false)}
+              onPlay={() => setIsPlaying(true)}
+              style={{ display: 'none' }}
+            />
           </div>
         )}
         
