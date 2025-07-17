@@ -8,6 +8,7 @@ const VerhalenMachine = () => {
   const [currentStep, setCurrentStep] = useState('');
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hasAudio, setHasAudio] = useState(false);
   const audioRef = useRef(null);
 
   const callClaude = async (prompt) => {
@@ -56,6 +57,7 @@ const VerhalenMachine = () => {
         audioRef.current.src = audioUrl;
         audioRef.current.play();
         setIsPlaying(true);
+        setHasAudio(true);
       }
       
     } catch (error) {
@@ -82,11 +84,23 @@ const VerhalenMachine = () => {
     setIsPlaying(false);
   };
 
+  const resetStory = () => {
+    setStory('');
+    setInput('');
+    setIsPlaying(false);
+    setHasAudio(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+  };
+
   const generateStory = async () => {
     if (!input.trim()) return;
     
     setIsGenerating(true);
     setStory('');
+    setHasAudio(false);
     setCurrentStep('Het verhaal plannen...');
     
     try {
@@ -170,7 +184,7 @@ Geef alleen het verhaal terug, geen andere tekst.`;
         </div>
 
         {/* Input Section */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-8">
+        <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-8 mb-8">
           <div className="flex justify-center mb-6">
             <BookOpen className="text-purple-500" size={48} />
           </div>
@@ -184,20 +198,21 @@ Geef alleen het verhaal terug, geen andere tekst.`;
             </p>
           </div>
 
-          <div className="flex gap-4 max-w-md mx-auto mb-6">
+          {/* Mobile-responsive input */}
+          <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto mb-6">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Bijvoorbeeld: pizza, fiets, chocolade..."
-              className="flex-1 px-4 py-3 text-lg border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-500 transition-colors"
+              className="flex-1 px-4 py-3 text-lg border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-500 transition-colors w-full"
               disabled={isGenerating}
             />
             <button
               onClick={generateStory}
               disabled={isGenerating || !input.trim()}
-              className="px-6 py-3 bg-purple-500 text-white rounded-xl font-bold text-lg hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-6 py-3 bg-purple-500 text-white rounded-xl font-bold text-lg hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               {isGenerating ? (
                 <>
@@ -233,7 +248,7 @@ Geef alleen het verhaal terug, geen andere tekst.`;
 
         {/* Loading Section */}
         {isGenerating && (
-          <div className="bg-white rounded-3xl shadow-2xl p-8 mb-8">
+          <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-8 mb-8">
             <div className="text-center">
               <div className="flex justify-center mb-4">
                 <Loader2 className="animate-spin text-purple-500" size={48} />
@@ -253,38 +268,36 @@ Geef alleen het verhaal terug, geen andere tekst.`;
 
         {/* Story Display */}
         {story && !isGenerating && (
-          <div className="bg-white rounded-3xl shadow-2xl p-8">
+          <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-8">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-gray-800 mb-2">
                 Jouw verhaal over: {input}! 📖
               </h3>
-              <div className="flex justify-center">
-                <Sparkles className="text-yellow-500" size={32} />
-              </div>
-            </div>
-            
-            <div className="prose prose-lg max-w-none">
-              <div className="text-gray-800 leading-relaxed space-y-4">
-                {story.split('\n\n').map((paragraph, index) => (
-                  <p key={index} className="text-lg">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
-            </div>
-            
-            <div className="text-center mt-8">
-              <div className="flex gap-4 justify-center">
+              
+              {/* Audio Controls - Moved between title and content */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-6">
                 <button
-                  onClick={generateAudio}
+                  onClick={hasAudio ? togglePlayback : generateAudio}
                   disabled={isGeneratingAudio}
-                  className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold text-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  className="px-6 py-3 bg-blue-500 text-white rounded-xl font-bold text-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2 w-full sm:w-auto"
                 >
                   {isGeneratingAudio ? (
                     <>
                       <Loader2 className="animate-spin" size={20} />
                       Audio maken...
                     </>
+                  ) : hasAudio ? (
+                    isPlaying ? (
+                      <>
+                        <Pause size={20} />
+                        Pauzeren
+                      </>
+                    ) : (
+                      <>
+                        <Play size={20} />
+                        Afspelen
+                      </>
+                    )
                   ) : (
                     <>
                       <Volume2 size={20} />
@@ -294,42 +307,27 @@ Geef alleen het verhaal terug, geen andere tekst.`;
                 </button>
                 
                 <button
-                  onClick={() => {
-                    setStory('');
-                    setInput('');
-                    setIsPlaying(false);
-                    if (audioRef.current) {
-                      audioRef.current.pause();
-                      audioRef.current.src = '';
-                    }
-                  }}
-                  className="px-6 py-3 bg-green-500 text-white rounded-xl font-bold text-lg hover:bg-green-600 transition-colors"
+                  onClick={resetStory}
+                  className="px-6 py-3 bg-green-500 text-white rounded-xl font-bold text-lg hover:bg-green-600 transition-colors w-full sm:w-auto"
                 >
                   Nog een verhaal maken! 🎉
                 </button>
               </div>
-              
-              {/* Audio controls (show only when audio is loaded) */}
-              {audioRef.current && audioRef.current.src && (
-                <div className="mt-4 flex justify-center items-center gap-4">
-                  <button
-                    onClick={togglePlayback}
-                    className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors flex items-center gap-2"
-                  >
-                    {isPlaying ? (
-                      <>
-                        <Pause size={16} />
-                        Pauzeren
-                      </>
-                    ) : (
-                      <>
-                        <Play size={16} />
-                        Afspelen
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
+
+              <div className="flex justify-center">
+                <Sparkles className="text-yellow-500" size={32} />
+              </div>
+            </div>
+            
+            {/* Story Content */}
+            <div className="prose prose-lg max-w-none">
+              <div className="text-gray-800 leading-relaxed space-y-4">
+                {story.split('\n\n').map((paragraph, index) => (
+                  <p key={index} className="text-lg">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
             </div>
             
             {/* Hidden audio element */}
