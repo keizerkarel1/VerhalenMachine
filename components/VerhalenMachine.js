@@ -270,8 +270,8 @@ Geef alleen het verhaal terug, geen andere tekst.`;
         {story && !isGenerating && (
           <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-8">
             <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">
-                Het verhaal van {input}! 📖
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                Jouw verhaal over: {input}! 📖
               </h3>
               
               {/* Audio Controls - Moved between title and content */}
