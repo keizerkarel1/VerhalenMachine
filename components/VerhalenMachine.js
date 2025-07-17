@@ -256,7 +256,7 @@ Geef alleen het verhaal terug, geen andere tekst.`;
           <div className="bg-white rounded-3xl shadow-2xl p-8">
             <div className="text-center mb-6">
               <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                Het verhaal van {input}! 📖
+                Jouw verhaal over: {input}! 📖
               </h3>
               <div className="flex justify-center">
                 <Sparkles className="text-yellow-500" size={32} />
